@@ -5,7 +5,12 @@ const ThetaDropDataWarehouse = artifacts.require('ThetaDropDataWarehouse')
 const StaticMarket = artifacts.require('StaticMarket')
 const WyvernRegistry = artifacts.require('WyvernRegistry')
 const TestERC20 = artifacts.require('TestERC20')
-const TestERC721 = artifacts.require('HighVibesTDrop.sol')
+const TESTBASIC = artifacts.require('HighVibesTDROPBASIC.sol')
+const TESTBURNTFUEL = artifacts.require('HighVibesTDROPBURNTFUEL.sol')
+const TESTBURNVIBES = artifacts.require('HighVibesTDROPBURNVIBES.sol')
+const TESTLIKE = artifacts.require('HighVibesTDROPLIKE.sol')
+const TESTMINTNFT = artifacts.require('HighVibesTDROPMINTNFT.sol')
+const TESTWISHLIST = artifacts.require('HighVibesTDROPWISHLIST.sol')
 const MockTDropToken = artifacts.require('MockTDropToken')
 
 const Web3 = require('web3')
@@ -14,6 +19,7 @@ const web3 = new Web3(provider)
 const {wrap,ZERO_BYTES32, CHAIN_ID} = require('../test/aux')
 const BN = web3.utils.BN
 
+//Default values are used for general testing, contract parameters will be used when going live.
 const platformFeeSplitBasisPoints = 1000
 const epsilon = new BN('1000000000000000000') // 1 * 10**18, 1 TDrops
 const alpha = new BN('1000000000000000000')
@@ -56,6 +62,7 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         return {registry, marketplace:wrap(marketplace), tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken}
     }
+
     let nftSeller            = accounts[3]
     let nftBuyer             = accounts[4]
     let platformFeeRecipient = accounts[7]
@@ -67,12 +74,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
       
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [basic] = await deploy([TESTBASIC])
 
-        await erc721.basicMint(nftSeller, nftTokenID)
+        await basic.basicMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await basic.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -87,11 +93,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, basic, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
-        let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
+        await verifyTradeOutcome(basic, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        let maxDiff = new BN('100000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
     it('Wishlist TDrop Mining Test', async () => {
@@ -101,12 +107,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [wishlist] = await deploy([TESTWISHLIST])
 
-        await erc721.wishlistMint(nftSeller, nftTokenID)
+        await wishlist.wishlistMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await wishlist.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -121,10 +126,10 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, wishlist, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        await verifyTradeOutcome(wishlist, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
         let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
@@ -135,12 +140,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
     
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [like] = await deploy([TESTLIKE])
 
-        await erc721.likeMint(nftSeller, nftTokenID)
+        await like.likeMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await like.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -155,10 +159,10 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, like, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        await verifyTradeOutcome(like, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
         let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
@@ -169,12 +173,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
     
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [burnvibes] = await deploy([TESTBURNVIBES])
 
-        await erc721.burnVibesMint(nftSeller, nftTokenID)
+        await burnvibes.burnVibesMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await burnvibes.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -189,10 +192,10 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, burnvibes, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        await verifyTradeOutcome(burnvibes, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
         let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
@@ -203,12 +206,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
         
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [burntfuel] = await deploy([TESTBURNTFUEL])
 
-        await erc721.burnTFuelMint(nftSeller, nftTokenID)
+        await burntfuel.burnTFuelMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await burntfuel.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -223,10 +225,10 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, burntfuel, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        await verifyTradeOutcome(burntfuel, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
         let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
@@ -237,12 +239,11 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
    
         let {registry, marketplace, tokenSwapAgent, dataWarehouse, atomicizer, statici, tdropToken} = await deployCoreContracts()
         let tokenSwapAgentAddr = tokenSwapAgent.address
-        let [erc721] = await deploy([TestERC721])
+        let [mintnft] = await deploy([TESTMINTNFT])
 
-        await erc721.NFTDropMint(nftSeller, nftTokenID)
+        await mintnft.NFTDropMint(nftSeller, nftTokenID)
 
-        // The seller puts the NFT on sale
-        await erc721.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
+        await mintnft.setApprovalForAll(tokenSwapAgentAddr, true, {from: nftSeller})
 
         // The NFT trade
         let lastTradeBlockHeight = new BN(0)
@@ -257,10 +258,10 @@ contract('HighVibes-TDrop-Liquidity-Mining', (accounts) => {
 
         let nftSellerSalt = getSalt()
         let nftBuyerSalt  = getSalt()
-        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, erc721, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
+        let {one, sigOne, firstCall, two, sigTwo, secondCall} = await prepareForNFTTrade(marketplace, mintnft, nftSeller, nftSellerSalt, nftBuyer, nftBuyerSalt, nftTokenID, currentTradePrice)        
         await marketplace.tradeNFT(one, sigOne, firstCall, two, sigTwo, secondCall, ZERO_BYTES32, {from: nftBuyer, value: currentTradePrice})
 
-        await verifyTradeOutcome(erc721, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
+        await verifyTradeOutcome(mintnft, nftSeller, nftBuyer, nftTokenID, currentTradePrice, sellerEthBalanceB4Trade, buyerEthBalanceB4Trade, platformFeeRecipientEthBalanceB4Trade, true)
         let maxDiff = new BN('100000000000000000') // 10^17 TDropWei = 0.1 TDrop
         await verifyLiquidityMiningResults(nftSeller, nftBuyer, sellerTDropBalanceB4Trade, buyerTDropBalanceB4Trade, currentTradePrice, highestSellingPriceInThePast, currentTradeBlockHeight, lastTradeBlockHeight, maxDiff, true)
     })
